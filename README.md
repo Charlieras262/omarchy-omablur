@@ -78,8 +78,12 @@ just read the one shared value.
 Hyprland only renders blur behind a surface that isn't fully opaque — an
 opaque window or bar shows none of it, no matter how strong
 `decoration:blur` is set. This plugin handles its own half of that: turning
-blur on makes the bar translucent (the same transparency its own menu
-toggle controls), and turning it off restores full opacity.
+blur on dims the bar's own background to a partial opacity (via
+[omarchy-floating-bar](https://github.com/Charlieras262/omarchy-floating-bar)
+1.5.0+'s `backgroundOpacity`, distinct from Omarchy's own bar-transparency
+toggle, which drops the background to fully invisible rather than a
+partial, blur-showing one), and turning it off restores full opacity. Bars
+that don't support `backgroundOpacity` are left untouched.
 
 Regular app windows are a separate story — Hyprland has no idea which of
 your windows you want see-through, so that's a per-app choice you make

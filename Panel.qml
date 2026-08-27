@@ -123,30 +123,22 @@ Panel {
     persistNow()
   }
 
-  // ------------------------------------------------------- bar transparency
+  // -------------------------------------------------------- shell opacity
   //
   // Blur only renders behind a surface that isn't fully opaque -- an opaque
-  // bar shows none of it no matter how strong decoration:blur is set. Bars
-  // that support it (currently charlieras262.floating-bar 1.5.0+) expose
-  // `backgroundOpacity` for exactly this -- distinct from Omarchy's own
-  // bar-transparency toggle, which drops the background to fully invisible
-  // (alpha 0) rather than a partial, blur-showing alpha. Bars that don't
-  // define it just ignore the extra shell.json key harmlessly.
-  readonly property real blurBackgroundOpacity: 0.6
-  function setBarTranslucent(value) {
-    if (!root.bar || typeof root.bar.backgroundOpacity !== "number") return
-    var want = value ? root.blurBackgroundOpacity : 1
-    if (root.bar.backgroundOpacity === want) return
-    if (root.bar.shell && typeof root.bar.shell.mutateShellConfig === "function") {
-      root.bar.shell.mutateShellConfig(function(config) {
-        if (typeof config.bar !== "object" || config.bar === null) config.bar = {}
-        config.bar.backgroundOpacity = want
-      })
-    } else {
-      root.bar.backgroundOpacity = want
-    }
+  // bar/menu/notification shows none of it no matter how strong
+  // decoration:blur is set. Style.shellOpacity is a shared token (added by
+  // this plugin's own patches/apply.py -- see its README) that the bar's own
+  // background, every KeyboardPanel-based popup, the notification card, and
+  // the menu card all already read; setting it here dims the whole shell at
+  // once, with no direct coupling to any of them. Systems that haven't run
+  // that patch just don't have the property, so this is a harmless no-op.
+  readonly property real shellBlurOpacity: 0.75
+  function setShellOpacity(value) {
+    if (typeof Style.shellOpacity !== "number") return
+    Style.shellOpacity = value ? root.shellBlurOpacity : 1
   }
-  onBlurEnabledChanged: root.setBarTranslucent(root.blurEnabled)
+  onBlurEnabledChanged: root.setShellOpacity(root.blurEnabled)
 
   // -------------------------------------------------------------- open/close
   //
@@ -161,7 +153,7 @@ Panel {
   readonly property bool loaded: roundingLoaded && blurEnabledLoaded && blurSizeLoaded
   onLoadedChanged: if (loaded) {
     root.activePreset = root.detectPreset()
-    root.setBarTranslucent(root.blurEnabled)
+    root.setShellOpacity(root.blurEnabled)
   }
 
   onOpenedChanged: if (opened && !loaded) refresh()
