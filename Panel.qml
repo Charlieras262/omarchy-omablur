@@ -227,28 +227,56 @@ Panel {
     id: omablurGlyph
     Item {
       anchors.fill: parent
+
+      // Squircle badge: cream card with a soft dark blob glowing off-center,
+      // faked with stacked semi-transparent circles (no blur/effects module
+      // dependency) since a real gaussian blur isn't available here.
       Rectangle {
-        anchors.centerIn: parent
-        width: parent.width * 0.92
-        height: parent.height * 0.92
-        radius: width * 0.4
-        color: button.foreground
-        opacity: 0.10
+        id: squircle
+        anchors.fill: parent
+        radius: width * 0.28
+        color: "#efe9df"
       }
-      Rectangle {
-        anchors.centerIn: parent
-        width: parent.width * 0.7
-        height: parent.height * 0.7
-        radius: width * 0.38
-        color: button.foreground
-        opacity: 0.22
-      }
-      Rectangle {
-        anchors.centerIn: parent
-        width: parent.width * 0.48
-        height: parent.height * 0.48
-        radius: width * 0.34
-        color: button.foreground
+      Item {
+        anchors.fill: squircle
+        anchors.margins: 1
+        clip: true
+
+        Rectangle {
+          width: squircle.width * 0.98
+          height: width
+          radius: width / 2
+          x: squircle.width * 0.06
+          y: squircle.height * 0.30
+          color: "#1a1a1a"
+          opacity: 0.10
+        }
+        Rectangle {
+          width: squircle.width * 0.74
+          height: width
+          radius: width / 2
+          x: squircle.width * 0.15
+          y: squircle.height * 0.40
+          color: "#1a1a1a"
+          opacity: 0.22
+        }
+        Rectangle {
+          width: squircle.width * 0.52
+          height: width
+          radius: width / 2
+          x: squircle.width * 0.22
+          y: squircle.height * 0.48
+          color: "#1a1a1a"
+          opacity: 0.45
+        }
+        Rectangle {
+          width: squircle.width * 0.32
+          height: width
+          radius: width / 2
+          x: squircle.width * 0.30
+          y: squircle.height * 0.56
+          color: "#141414"
+        }
       }
     }
   }
