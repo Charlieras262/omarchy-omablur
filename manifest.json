@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "charlieras262.omablur",
+  "name": "Omablur",
+  "version": "1.0.0",
+  "author": "Charlieras262",
+  "description": "Bar panel to tune window corner rounding and blur intensity live, no config file editing required",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Omablur",
+    "description": "Tune window corner rounding and blur intensity",
+    "category": "Compositor",
+    "allowMultiple": false
+  }
+}
