@@ -6,7 +6,9 @@ import qs.Commons
 
 // Bar chip + popup panel to tune window corner rounding and blur intensity
 // live. Dragging a slider applies the change to the running Hyprland
-// session immediately via `hyprctl keyword` (no config write, no reload);
+// session immediately via `hyprctl eval` (Omarchy's Lua config parser
+// doesn't support the older `hyprctl keyword`, so this is required, not
+// just faster); no config write, no reload happens for the live preview.
 // releasing it persists the setting as a marked block in the user's own
 // ~/.config/hypr/looknfeel.lua so it survives restarts, using the same
 // atomic, symlink-safe writer other Omarchy plugins use for their own
@@ -212,11 +214,7 @@ Panel {
     applyQueued = false
     var size = blurSizeFor(queuedBlurPercent)
     var passes = blurPassesFor(queuedBlurPercent)
-    var batch = "keyword decoration:rounding " + queuedRounding
-      + " ; keyword decoration:blur:enabled " + (queuedBlurEnabled ? 1 : 0)
-      + " ; keyword decoration:blur:size " + size
-      + " ; keyword decoration:blur:passes " + passes
-    applyProc.command = ["hyprctl", "--batch", batch]
+    applyProc.command = ["hyprctl", "eval", root.decorationConfig(queuedRounding, queuedBlurEnabled, size, passes)]
     applyProc.running = true
   }
 
@@ -226,7 +224,7 @@ Panel {
       // Style.cornerRadius already mirrors decoration:rounding for the rest
       // of the shell (every popup panel, and any bar -- like Floating Bar --
       // that defaults its own corners to it); Style.refresh() is its own
-      // public re-probe, called only after our keyword call has actually
+      // public re-probe, called only after our eval call has actually
       // landed so it can't read the pre-change value.
       Style.refresh()
       if (root.applyQueued) root.runApply()
@@ -236,21 +234,28 @@ Panel {
   // ---------------------------------------------------------------- persist
   //
   // Only called on slider release / toggle click, never mid-drag.
-  function luaBlock() {
-    var size = blurSizeFor(root.blurPercent)
-    var passes = blurPassesFor(root.blurPercent)
+  // Shared by the live apply (hyprctl eval) and the persisted file (wrapped
+  // as-is inside our marked block) so both always describe the same state
+  // the same way.
+  function decorationConfig(rounding, blurEnabled, size, passes) {
     return "hl.config({\n"
       + "  decoration = {\n"
-      + "    rounding = " + root.rounding + ",\n"
+      + "    rounding = " + rounding + ",\n"
       + "    blur = {\n"
-      + "      enabled = " + (root.blurEnabled ? "true" : "false") + ",\n"
+      + "      enabled = " + (blurEnabled ? "true" : "false") + ",\n"
       + "      size = " + size + ",\n"
       + "      passes = " + passes + ",\n"
       + "      new_optimizations = true,\n"
       + "      ignore_opacity = true,\n"
       + "    },\n"
       + "  },\n"
-      + "})\n"
+      + "})"
+  }
+
+  function luaBlock() {
+    var size = blurSizeFor(root.blurPercent)
+    var passes = blurPassesFor(root.blurPercent)
+    return root.decorationConfig(root.rounding, root.blurEnabled, size, passes) + "\n"
   }
 
   function persistNow() {
