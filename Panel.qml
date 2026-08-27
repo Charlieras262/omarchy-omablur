@@ -228,14 +228,18 @@ Panel {
     Item {
       anchors.fill: parent
 
-      // Squircle badge: cream card with a soft dark blob glowing off-center,
-      // faked with stacked semi-transparent circles (no blur/effects module
-      // dependency) since a real gaussian blur isn't available here.
+      // Squircle outline housing a soft blob glowing off-center, faked with
+      // stacked semi-transparent circles (no blur/effects module dependency)
+      // since a real gaussian blur isn't available here. Monochrome, in the
+      // bar's own foreground color, like every other bar icon.
       Rectangle {
         id: squircle
-        anchors.fill: parent
+        anchors.centerIn: parent
+        width: parent.width * 0.86
+        height: parent.height * 0.86
         radius: width * 0.28
-        color: "#efe9df"
+        color: button.foreground
+        opacity: 0.14
       }
       Item {
         anchors.fill: squircle
@@ -243,39 +247,30 @@ Panel {
         clip: true
 
         Rectangle {
-          width: squircle.width * 0.98
+          width: squircle.width * 0.72
           height: width
           radius: width / 2
-          x: squircle.width * 0.06
-          y: squircle.height * 0.30
-          color: "#1a1a1a"
-          opacity: 0.10
+          x: squircle.width * 0.16
+          y: squircle.height * 0.38
+          color: button.foreground
+          opacity: 0.3
         }
         Rectangle {
-          width: squircle.width * 0.74
+          width: squircle.width * 0.5
           height: width
           radius: width / 2
-          x: squircle.width * 0.15
-          y: squircle.height * 0.40
-          color: "#1a1a1a"
-          opacity: 0.22
+          x: squircle.width * 0.24
+          y: squircle.height * 0.46
+          color: button.foreground
+          opacity: 0.6
         }
         Rectangle {
-          width: squircle.width * 0.52
+          width: squircle.width * 0.3
           height: width
           radius: width / 2
-          x: squircle.width * 0.22
-          y: squircle.height * 0.48
-          color: "#1a1a1a"
-          opacity: 0.45
-        }
-        Rectangle {
-          width: squircle.width * 0.32
-          height: width
-          radius: width / 2
-          x: squircle.width * 0.30
-          y: squircle.height * 0.56
-          color: "#141414"
+          x: squircle.width * 0.32
+          y: squircle.height * 0.54
+          color: button.foreground
         }
       }
     }
@@ -286,7 +281,6 @@ Panel {
     anchors.fill: parent
     bar: root.bar
     iconComponent: omablurGlyph
-    opticalSize: Style.bar.iconCanvas * 1.4
     tooltipText: "Rounding & Blur"
     onPressed: root.toggle()
   }
