@@ -506,6 +506,14 @@ Panel {
             spacing: Style.space(14)
             visible: root.activePreset === "custom"
 
+            PanelSeparator { width: parent.width; foreground: root.bar.foreground }
+
+            PanelSectionHeader {
+              text: "CONFIG"
+              foreground: root.bar.foreground
+              fontFamily: root.bar.fontFamily
+            }
+
             Column {
               width: parent.width
               spacing: Style.space(6)
