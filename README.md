@@ -2,8 +2,10 @@
 
 A bar panel (`"kind": "bar-widget"`) to tune window corner rounding and blur
 intensity for [Omarchy](https://omarchy.org), without opening a config file.
-Click the bar chip, drag a slider — the change applies to the running
-Hyprland session immediately.
+Click the bar chip, pick a preset or drag a slider — the change applies to
+the running Hyprland session immediately.
+
+![Omablur panel: a master switch, four presets, and the corner rounding / blur intensity sliders under Custom](preview.png)
 
 ## Install
 
@@ -18,19 +20,26 @@ git-managed plugin does.
 
 Click the chip in the bar to open the panel:
 
-- **Corner rounding** — a 0-20px slider, mapped 1:1 to Hyprland's
-  `decoration:rounding`.
-- **Blur** — an on/off switch (`decoration:blur:enabled`).
-- **Intensity** — a 0-100% slider, shown while blur is on, converted to
-  Hyprland's `decoration:blur:size` (1-20, linear) and `decoration:blur:passes`
-  (1-3, stepped: each extra pass roughly doubles the GPU cost for a
-  much smaller visual gain past 2-3, so a straight linear mapping would make
-  the top half of the slider barely distinguishable but noticeably heavier).
+- **The switch** next to the title turns everything off (rounding to 0,
+  blur off) or back on — it remembers whatever was set before turning it
+  off, for the current session, and falls back to **Default** if there's
+  nothing to restore yet (e.g. right after a shell restart).
+- **Default / Minimum / Medium** apply a fixed rounding + blur-intensity
+  pair immediately. The active one is detected from Hyprland's own live
+  values, not stored separately, so it stays correct even if you change
+  something outside the panel.
+- **Custom** reveals two sliders instead: **corner rounding** (0-20px,
+  mapped 1:1 to Hyprland's `decoration:rounding`) and **blur intensity**
+  (0-100%, converted to `decoration:blur:size`, 1-20 linear, and
+  `decoration:blur:passes`, 1-3 stepped — each extra pass roughly doubles
+  the GPU cost for a much smaller visual gain past 2-3, so a straight
+  linear mapping would make the top half of the slider barely
+  distinguishable but noticeably heavier).
 
-Dragging a slider previews the change live via `hyprctl keyword` — nothing
-is written to disk until you release it. On release, the setting is
-persisted as a marked block in your own `~/.config/hypr/looknfeel.lua`, so
-it survives a Hyprland restart:
+Dragging a slider (or picking a preset) previews the change live via
+`hyprctl eval` — nothing is written to disk until you release it or the
+click lands. Once it does, the setting is persisted as a marked block in
+your own `~/.config/hypr/looknfeel.lua`, so it survives a Hyprland restart:
 
 ```lua
 -- BEGIN charlieras262.omablur
