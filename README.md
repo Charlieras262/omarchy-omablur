@@ -76,17 +76,30 @@ just read the one shared value.
 ### Making blur actually visible
 
 Hyprland only renders blur behind a surface that isn't fully opaque — an
-opaque window or bar shows none of it, no matter how strong
-`decoration:blur` is set. This plugin handles its own half of that: turning
-blur on dims the bar's own background to a partial opacity (via
-[omarchy-floating-bar](https://github.com/Charlieras262/omarchy-floating-bar)
-1.5.0+'s `backgroundOpacity`, distinct from Omarchy's own bar-transparency
-toggle, which drops the background to fully invisible rather than a
-partial, blur-showing one), and turning it off restores full opacity. Bars
-that don't support `backgroundOpacity` are left untouched.
+opaque window, bar, menu, or notification shows none of it, no matter how
+strong `decoration:blur` is set.
 
-Regular app windows are a separate story — Hyprland has no idea which of
-your windows you want see-through, so that's a per-app choice you make
+**The shell itself** — bar, popup panels (Display, network, bluetooth,
+audio, etc.), notifications, and the menu — is handled automatically, but
+needs a one-time opt-in system patch first, since it means touching
+Omarchy's own files (`sudo`, run once):
+
+```bash
+sudo python3 ~/.config/omarchy/plugins/charlieras262.omablur/patches/apply.py
+omarchy restart shell
+```
+
+This adds a shared `Style.shellOpacity` token (default `1`, fully opaque)
+that those surfaces' own background already reads. Turning Omablur's blur
+on sets it to `0.62`; turning it off sets it back to `1`. Each surface's
+color is forced to alpha 1 before that's applied, so `1` always means
+truly, fully opaque even if your theme's own `shell.toml` bakes in some
+`background-alpha` of its own — this plugin's `0` and `1` states are
+absolute, not stacked on top of that. See `patches/apply.py`'s own comments
+for exactly what it changes, and `patches/unapply.py` to revert it.
+
+**Regular app windows** are a separate story — Hyprland has no idea which
+of your windows you want see-through, so that's a per-app choice you make
 yourself with a window rule. Omarchy's `o.window(match, rules)` helper (see
 `$OMARCHY_PATH/default/hypr/windows.lua` for more examples) sets it:
 
@@ -98,7 +111,18 @@ o.window("^(kitty)$", { opacity = "0.85 0.80" })
 
 The two numbers are active/inactive opacity (0.0-1.0). Without a rule like
 this for an app, that app stays fully opaque and blur has nothing to show
-through, even with Omablur's blur switched on.
+through, even with Omablur's blur switched on. `decoration:blur:enabled`
+itself is already global — there's no per-app blur rule to add, only the
+opacity that lets it show.
+
+**A note on hardware:** blur is a compositor/GPU feature, not something
+this plugin renders itself — Omablur only sets the Hyprland options above.
+On some GPU/driver combinations (NVIDIA in particular has had a history of
+blur-related quirks with Hyprland), windows can stay genuinely unblurred
+even with correct opacity and `decoration:blur:enabled` — the same
+sharp background visible through a translucent window either way is the
+tell. If that happens, it's a Hyprland/driver-level limitation to chase
+separately, not something to expect this plugin to work around.
 
 ## Remove
 
