@@ -133,7 +133,7 @@ Panel {
   // the menu card all already read; setting it here dims the whole shell at
   // once, with no direct coupling to any of them. Systems that haven't run
   // that patch just don't have the property, so this is a harmless no-op.
-  readonly property real shellBlurOpacity: 0.75
+  readonly property real shellBlurOpacity: 0.62
   function setShellOpacity(value) {
     if (typeof Style.shellOpacity !== "number") return
     Style.shellOpacity = value ? root.shellBlurOpacity : 1

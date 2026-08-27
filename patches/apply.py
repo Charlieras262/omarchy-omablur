@@ -5,6 +5,12 @@ card, so this plugin can dim the whole shell (not just windows) to a
 partial opacity while its own blur is on -- Hyprland only renders blur
 behind a surface that isn't fully opaque.
 
+Each card's own background color is forced to alpha 1 before Style.shellOpacity
+is applied, so the result is an absolute opacity, not a multiplier stacked on
+top of whatever background-alpha the user's theme (shell.toml) already bakes
+into that color -- shellOpacity's default of 1 always means truly, fully
+opaque, even for a theme that ships translucent by default.
+
 Every file falls back to shellOpacity's default (1, fully opaque) when this
 plugin never touches it, so this is a no-op until Omablur actually sets it.
 Idempotent and safe to re-run: skips files already patched, and refuses to
@@ -43,9 +49,22 @@ PATCHES = [
         "path": "/usr/share/omarchy/shell/Ui/KeyboardPanel.qml",
         "marker": "Style.shellOpacity",
         "old": (
+            "    color: Color.popups.background\n"
+            "    borderSpec: root.borderSpec\n"
+            "    padding: root.padding\n"
+            "    radius: Style.cornerRadius\n"
             "    opacity: root.open || root.popoutSwitching ? 1.0 : 0\n"
         ),
         "new": (
+            "    // Color.popups.background can carry its own baked-in alpha\n"
+            "    // (shell.toml's [popups] background-alpha); forcing it to 1 here\n"
+            "    // first means Style.shellOpacity below is an absolute result, not\n"
+            "    // a multiplier on top of an already-translucent color -- a plugin\n"
+            "    // that never touches shellOpacity still reaches exactly opaque.\n"
+            "    color: Qt.rgba(Color.popups.background.r, Color.popups.background.g, Color.popups.background.b, 1)\n"
+            "    borderSpec: root.borderSpec\n"
+            "    padding: root.padding\n"
+            "    radius: Style.cornerRadius\n"
             "    opacity: (root.open || root.popoutSwitching ? 1.0 : 0) * Style.shellOpacity\n"
         ),
     },
@@ -60,7 +79,10 @@ PATCHES = [
         ),
         "new": (
             "  radius: cornerRadius\n"
-            "  color: Color.notifications.background\n"
+            "  // Forced to alpha 1 so Style.shellOpacity below is an absolute\n"
+            "  // result, not a multiplier on top of shell.toml's own\n"
+            "  // [notifications] background-alpha.\n"
+            "  color: Qt.rgba(Color.notifications.background.r, Color.notifications.background.g, Color.notifications.background.b, 1)\n"
             "  opacity: Style.shellOpacity\n"
             "  borderSpec: cardBorderSpec\n"
             "  clip: true\n"
@@ -75,7 +97,10 @@ PATCHES = [
             "      padding: root.contentMargin\n"
         ),
         "new": (
-            "      color: root.background\n"
+            "      // Forced to alpha 1 so Style.shellOpacity below is an absolute\n"
+            "      // result, not a multiplier on top of shell.toml's own [menu]\n"
+            "      // background-alpha.\n"
+            "      color: Qt.rgba(root.background.r, root.background.g, root.background.b, 1)\n"
             "      opacity: Style.shellOpacity\n"
             "      borderSpec: root.borderSpec\n"
             "      padding: root.contentMargin\n"
