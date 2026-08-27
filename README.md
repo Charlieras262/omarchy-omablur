@@ -5,7 +5,7 @@ intensity for [Omarchy](https://omarchy.org), without opening a config file.
 Click the bar chip, pick a preset or drag a slider — the change applies to
 the running Hyprland session immediately.
 
-![Omablur panel: a master switch, four presets, and the corner rounding / blur intensity sliders under Custom](preview.png)
+![Omablur panel open under its bar chip: a master switch, four presets, and the corner rounding / blur intensity sliders under Custom](preview.png)
 
 ## Install
 
