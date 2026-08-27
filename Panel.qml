@@ -123,6 +123,30 @@ Panel {
     persistNow()
   }
 
+  // ------------------------------------------------------- bar transparency
+  //
+  // Blur only renders behind a surface that isn't fully opaque -- an opaque
+  // bar shows none of it no matter how strong decoration:blur is set. Reuse
+  // the bar's own existing transparency toggle (the same one its own menu
+  // entry calls, persisted the same way) instead of drawing our own
+  // translucent surface, so this plays along with whatever that bar already
+  // does for transparency -- restoring full opacity is just calling it with
+  // false, not a separate "default" concept to keep in sync by hand.
+  function setBarTransparent(value) {
+    if (!root.bar) return
+    var want = !!value
+    if ((root.bar.requestedTransparent === true) === want) return
+    if (root.bar.shell && typeof root.bar.shell.mutateShellConfig === "function") {
+      root.bar.shell.mutateShellConfig(function(config) {
+        if (typeof config.bar !== "object" || config.bar === null) config.bar = {}
+        config.bar.transparent = want
+      })
+    } else if (typeof root.bar.setRequestedTransparency === "function") {
+      root.bar.setRequestedTransparency(want)
+    }
+  }
+  onBlurEnabledChanged: root.setBarTransparent(root.blurEnabled)
+
   // -------------------------------------------------------------- open/close
   //
   // `loaded` only flips true once all three probes have answered, and
@@ -134,7 +158,10 @@ Panel {
   property bool blurEnabledLoaded: false
   property bool blurSizeLoaded: false
   readonly property bool loaded: roundingLoaded && blurEnabledLoaded && blurSizeLoaded
-  onLoadedChanged: if (loaded) root.activePreset = root.detectPreset()
+  onLoadedChanged: if (loaded) {
+    root.activePreset = root.detectPreset()
+    root.setBarTransparent(root.blurEnabled)
+  }
 
   onOpenedChanged: if (opened && !loaded) refresh()
 

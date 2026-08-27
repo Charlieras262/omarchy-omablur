@@ -73,6 +73,29 @@ calls Omarchy's own `Style.refresh()` after each change, so both follow the
 slider live, with no direct coupling between the three plugins — they all
 just read the one shared value.
 
+### Making blur actually visible
+
+Hyprland only renders blur behind a surface that isn't fully opaque — an
+opaque window or bar shows none of it, no matter how strong
+`decoration:blur` is set. This plugin handles its own half of that: turning
+blur on makes the bar translucent (the same transparency its own menu
+toggle controls), and turning it off restores full opacity.
+
+Regular app windows are a separate story — Hyprland has no idea which of
+your windows you want see-through, so that's a per-app choice you make
+yourself with a window rule. Omarchy's `o.window(match, rules)` helper (see
+`$OMARCHY_PATH/default/hypr/windows.lua` for more examples) sets it:
+
+```lua
+-- ~/.config/hypr/hyprland.lua, or your own module required from it
+o.window("firefox", { opacity = "0.90 0.90" })
+o.window("^(kitty)$", { opacity = "0.85 0.80" })
+```
+
+The two numbers are active/inactive opacity (0.0-1.0). Without a rule like
+this for an app, that app stays fully opaque and blur has nothing to show
+through, even with Omablur's blur switched on.
+
 ## Remove
 
 ```bash
