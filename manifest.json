@@ -15,7 +15,7 @@
     "displayName": "Omablur",
     "description": "Tune window corner rounding and blur intensity",
     "category": "Compositor",
-    "defaultSection": "left",
+    "defaultSection": "right",
     "allowMultiple": false
   }
 }
