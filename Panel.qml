@@ -511,7 +511,7 @@ Panel {
             spacing: Style.space(14)
             visible: root.activePreset === "custom"
 
-            Item { width: 1; height: Style.space(6) }
+            Item { width: 1; height: Style.space(2) }
             PanelSeparator { width: parent.width; foreground: root.bar.foreground }
 
             PanelSectionHeader {
