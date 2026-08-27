@@ -56,6 +56,71 @@ Panel {
     return clampInt(((size - 1) / 19) * 100, 0, 100, 50)
   }
 
+  // ------------------------------------------------------------- presets
+  //
+  // "off" isn't a preset name; it's whatever rounding=0 with blur disabled
+  // looks like, and the master switch below is what puts it there. The
+  // three real presets are chosen so no combination of the two collides
+  // with each other or with that off state, which is what makes detecting
+  // the active one from Hyprland's own live values (rather than storing our
+  // own separate "which preset" flag) possible in the first place.
+  readonly property var presets: ({
+    "default": { rounding: 8, blurPercent: 40 },
+    "minimum": { rounding: 2, blurPercent: 10 },
+    "medium": { rounding: 14, blurPercent: 70 }
+  })
+  property string activePreset: "default"
+
+  function detectPreset() {
+    if (!root.blurEnabled) return "custom"
+    for (var name in root.presets) {
+      var p = root.presets[name]
+      if (root.rounding === p.rounding && root.blurPercent === p.blurPercent) return name
+    }
+    return "custom"
+  }
+
+  function applyPreset(name) {
+    if (name === "custom") { root.activePreset = "custom"; return }
+    var p = root.presets[name]
+    if (!p) return
+    root.activePreset = name
+    root.rounding = p.rounding
+    root.blurPercent = p.blurPercent
+    root.blurEnabled = true
+    applyLive(root.rounding, true, root.blurPercent)
+    persistNow()
+  }
+
+  // The master switch flattens everything to rounding=0 / blur off (an
+  // easy-to-detect combination none of the presets above produce) without
+  // losing whatever was set before -- that's remembered here for the
+  // session, in memory only, so switching back on restores it. A fresh
+  // panel that opens already in that flattened state (nothing to restore
+  // yet) falls back to the "default" preset instead.
+  readonly property bool masterEnabled: root.rounding > 0 || root.blurEnabled
+  property int savedRounding: 8
+  property int savedBlurPercent: 40
+  property string savedPreset: "default"
+
+  function toggleMaster() {
+    if (root.masterEnabled) {
+      root.savedRounding = root.rounding
+      root.savedBlurPercent = root.blurPercent
+      root.savedPreset = root.activePreset
+      root.rounding = 0
+      root.blurEnabled = false
+      applyLive(0, false, root.blurPercent)
+    } else {
+      root.rounding = root.savedRounding
+      root.blurPercent = root.savedBlurPercent
+      root.blurEnabled = true
+      root.activePreset = root.savedPreset
+      applyLive(root.rounding, true, root.blurPercent)
+    }
+    persistNow()
+  }
+
   // -------------------------------------------------------------- open/close
   //
   // `loaded` only flips true once all three probes have answered, and
@@ -67,6 +132,7 @@ Panel {
   property bool blurEnabledLoaded: false
   property bool blurSizeLoaded: false
   readonly property bool loaded: roundingLoaded && blurEnabledLoaded && blurSizeLoaded
+  onLoadedChanged: if (loaded) root.activePreset = root.detectPreset()
 
   onOpenedChanged: if (opened && !loaded) refresh()
 
@@ -195,23 +261,22 @@ Panel {
   Process { id: persistProc }
 
   // ------------------------------------------------------------------ input
-  function previewRounding(v) { applyLive(v, root.blurEnabled, root.blurPercent) }
+  // Both sliders only ever show while activePreset is "custom", which is
+  // only reachable with the master switch on -- so blur is always meant to
+  // read as "on" here too, same as the three named presets already force it.
+  function previewRounding(v) { applyLive(v, true, root.blurPercent) }
   function setRounding(v) {
     root.rounding = root.clampInt(v, 0, 20, root.rounding)
-    applyLive(root.rounding, root.blurEnabled, root.blurPercent)
+    root.blurEnabled = true
+    applyLive(root.rounding, true, root.blurPercent)
     persistNow()
   }
 
-  function previewBlurPercent(v) { applyLive(root.rounding, root.blurEnabled, v) }
+  function previewBlurPercent(v) { applyLive(root.rounding, true, v) }
   function setBlurPercent(v) {
     root.blurPercent = root.clampInt(v, 0, 100, root.blurPercent)
-    applyLive(root.rounding, root.blurEnabled, root.blurPercent)
-    persistNow()
-  }
-
-  function toggleBlurEnabled() {
-    root.blurEnabled = !root.blurEnabled
-    applyLive(root.rounding, root.blurEnabled, root.blurPercent)
+    root.blurEnabled = true
+    applyLive(root.rounding, true, root.blurPercent)
     persistNow()
   }
 
@@ -314,118 +379,210 @@ Panel {
         opacity: root.loaded ? 1 : 0.45
         Behavior on opacity { NumberAnimation { duration: 120 } }
 
-        // ---------------------------------------------------------- header
-        Text {
-          text: "ROUNDING & BLUR"
-          color: root.bar.foreground
-          font.family: root.bar.fontFamily
-          font.pixelSize: Style.font.caption
-          font.bold: true
-        }
-
-        // --------------------------------------------------------- rounding
-        Column {
+        // ------------------------------------------------------------ hero
+        Item {
           width: parent.width
-          spacing: Style.space(6)
+          height: Math.max(heroIconWrap.height, heroTextCol.implicitHeight, heroToggle.implicitHeight)
 
-          Row {
-            width: parent.width
+          Item {
+            id: heroIconWrap
+            width: Style.space(30)
+            height: Style.space(30)
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            Loader { anchors.fill: parent; sourceComponent: omablurGlyph }
+          }
+
+          Column {
+            id: heroTextCol
+            anchors.left: heroIconWrap.right
+            anchors.leftMargin: Style.space(10)
+            anchors.right: heroToggle.left
+            anchors.rightMargin: Style.space(10)
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Style.space(2)
+
             Text {
-              id: roundingHeader
-              text: "CORNER ROUNDING"
+              text: "Rounding & Blur"
               color: root.bar.foreground
               font.family: root.bar.fontFamily
-              font.pixelSize: Style.font.caption
+              font.pixelSize: Style.font.subtitle
+              font.bold: true
             }
-            Item { width: parent.width - roundingHeader.implicitWidth - roundingValue.implicitWidth; height: 1 }
             Text {
-              id: roundingValue
-              text: Math.round(roundingSlider.dragging ? roundingSlider.liveValue : root.rounding) + "px"
+              text: "WINDOW DECORATIONS"
               color: Qt.darker(root.bar.foreground, 1.4)
               font.family: root.bar.fontFamily
               font.pixelSize: Style.font.caption
-              font.bold: true
             }
           }
 
-          PanelSlider {
-            id: roundingSlider
-            bar: root.bar
-            width: parent.width
-            height: Style.space(20)
-            minimum: 0
-            maximum: 20
-            step: 1
-            integer: true
-            value: root.rounding
-            onMoved: function(v) { root.previewRounding(v) }
-            onReleased: function(v) { root.setRounding(v) }
+          ToggleSwitch {
+            id: heroToggle
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            checked: root.masterEnabled
+            foreground: root.bar.foreground
+            onToggled: root.toggleMaster()
           }
         }
 
-        // ------------------------------------------------------------ blur
+        PanelSeparator { width: parent.width; foreground: root.bar.foreground }
+
+        // --------------------------------------------------------- presets
         Column {
           width: parent.width
-          spacing: Style.space(6)
+          spacing: Style.space(8)
+          enabled: root.masterEnabled
+          opacity: root.masterEnabled ? 1 : 0.45
+          Behavior on opacity { NumberAnimation { duration: 120 } }
 
-          Row {
+          PanelSectionHeader {
+            text: "PRESET"
+            foreground: root.bar.foreground
+            fontFamily: root.bar.fontFamily
+          }
+
+          Grid {
+            id: presetGrid
             width: parent.width
-            spacing: Style.space(8)
-            Text {
-              id: blurLabel
-              text: "BLUR"
-              color: root.bar.foreground
-              font.family: root.bar.fontFamily
-              font.pixelSize: Style.font.caption
-              anchors.verticalCenter: parent.verticalCenter
-            }
-            Item {
-              width: parent.width - blurLabel.implicitWidth - blurSwitch.implicitWidth - parent.spacing * 2
-              height: 1
-            }
-            ToggleSwitch {
-              id: blurSwitch
-              anchors.verticalCenter: parent.verticalCenter
-              checked: root.blurEnabled
+            columns: 4
+            spacing: Style.space(6)
+            readonly property real cellWidth: (width - spacing * (columns - 1)) / columns
+
+            Button {
+              text: "Default"
+              width: presetGrid.cellWidth
+              bordered: true
+              active: root.activePreset === "default"
               foreground: root.bar.foreground
-              onToggled: root.toggleBlurEnabled()
+              fontFamily: root.bar.fontFamily
+              fontSize: Style.font.caption
+              horizontalPadding: Style.spacing.sm
+              verticalPadding: Style.spacing.controlPaddingY
+              onClicked: root.applyPreset("default")
+            }
+            Button {
+              text: "Minimum"
+              width: presetGrid.cellWidth
+              bordered: true
+              active: root.activePreset === "minimum"
+              foreground: root.bar.foreground
+              fontFamily: root.bar.fontFamily
+              fontSize: Style.font.caption
+              horizontalPadding: Style.spacing.sm
+              verticalPadding: Style.spacing.controlPaddingY
+              onClicked: root.applyPreset("minimum")
+            }
+            Button {
+              text: "Medium"
+              width: presetGrid.cellWidth
+              bordered: true
+              active: root.activePreset === "medium"
+              foreground: root.bar.foreground
+              fontFamily: root.bar.fontFamily
+              fontSize: Style.font.caption
+              horizontalPadding: Style.spacing.sm
+              verticalPadding: Style.spacing.controlPaddingY
+              onClicked: root.applyPreset("medium")
+            }
+            Button {
+              text: "Custom"
+              width: presetGrid.cellWidth
+              bordered: true
+              active: root.activePreset === "custom"
+              foreground: root.bar.foreground
+              fontFamily: root.bar.fontFamily
+              fontSize: Style.font.caption
+              horizontalPadding: Style.spacing.sm
+              verticalPadding: Style.spacing.controlPaddingY
+              onClicked: root.applyPreset("custom")
             }
           }
 
-          Row {
+          // ------------------------------------------------------- custom
+          Column {
             width: parent.width
-            visible: root.blurEnabled
-            Text {
-              id: intensityHeader
-              text: "INTENSITY"
-              color: root.bar.foreground
-              font.family: root.bar.fontFamily
-              font.pixelSize: Style.font.caption
-            }
-            Item { width: parent.width - intensityHeader.implicitWidth - intensityValue.implicitWidth; height: 1 }
-            Text {
-              id: intensityValue
-              text: Math.round(blurSlider.dragging ? blurSlider.liveValue : root.blurPercent) + "%"
-              color: Qt.darker(root.bar.foreground, 1.4)
-              font.family: root.bar.fontFamily
-              font.pixelSize: Style.font.caption
-              font.bold: true
-            }
-          }
+            spacing: Style.space(14)
+            visible: root.activePreset === "custom"
 
-          PanelSlider {
-            id: blurSlider
-            bar: root.bar
-            width: parent.width
-            height: Style.space(20)
-            visible: root.blurEnabled
-            minimum: 0
-            maximum: 100
-            step: 1
-            integer: true
-            value: root.blurPercent
-            onMoved: function(v) { root.previewBlurPercent(v) }
-            onReleased: function(v) { root.setBlurPercent(v) }
+            Column {
+              width: parent.width
+              spacing: Style.space(6)
+
+              Row {
+                width: parent.width
+                Text {
+                  id: roundingHeader
+                  text: "CORNER ROUNDING"
+                  color: root.bar.foreground
+                  font.family: root.bar.fontFamily
+                  font.pixelSize: Style.font.caption
+                }
+                Item { width: parent.width - roundingHeader.implicitWidth - roundingValue.implicitWidth; height: 1 }
+                Text {
+                  id: roundingValue
+                  text: Math.round(roundingSlider.dragging ? roundingSlider.liveValue : root.rounding) + "px"
+                  color: Qt.darker(root.bar.foreground, 1.4)
+                  font.family: root.bar.fontFamily
+                  font.pixelSize: Style.font.caption
+                  font.bold: true
+                }
+              }
+
+              PanelSlider {
+                id: roundingSlider
+                bar: root.bar
+                width: parent.width
+                height: Style.space(20)
+                minimum: 0
+                maximum: 20
+                step: 1
+                integer: true
+                value: root.rounding
+                onMoved: function(v) { root.previewRounding(v) }
+                onReleased: function(v) { root.setRounding(v) }
+              }
+            }
+
+            Column {
+              width: parent.width
+              spacing: Style.space(6)
+
+              Row {
+                width: parent.width
+                Text {
+                  id: intensityHeader
+                  text: "BLUR INTENSITY"
+                  color: root.bar.foreground
+                  font.family: root.bar.fontFamily
+                  font.pixelSize: Style.font.caption
+                }
+                Item { width: parent.width - intensityHeader.implicitWidth - intensityValue.implicitWidth; height: 1 }
+                Text {
+                  id: intensityValue
+                  text: Math.round(blurSlider.dragging ? blurSlider.liveValue : root.blurPercent) + "%"
+                  color: Qt.darker(root.bar.foreground, 1.4)
+                  font.family: root.bar.fontFamily
+                  font.pixelSize: Style.font.caption
+                  font.bold: true
+                }
+              }
+
+              PanelSlider {
+                id: blurSlider
+                bar: root.bar
+                width: parent.width
+                height: Style.space(20)
+                minimum: 0
+                maximum: 100
+                step: 1
+                integer: true
+                value: root.blurPercent
+                onMoved: function(v) { root.previewBlurPercent(v) }
+                onReleased: function(v) { root.setBlurPercent(v) }
+              }
+            }
           }
         }
       }
