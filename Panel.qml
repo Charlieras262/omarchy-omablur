@@ -29,7 +29,6 @@ Panel {
   // These reflect Hyprland's actual live config, probed on first open. They
   // only change on slider release / toggle click -- never mid-drag, so nothing
   // downstream (the persisted file) writes on every pixel of a drag.
-  property bool loaded: false
   property int rounding: 8
   property bool blurEnabled: true
   property int blurPercent: 50 // 0-100, converted to size/passes below
@@ -58,6 +57,17 @@ Panel {
   }
 
   // -------------------------------------------------------------- open/close
+  //
+  // `loaded` only flips true once all three probes have answered, and
+  // sliders/switch stay non-interactive until then (see the Column below).
+  // Without that gate, touching a control before a slower probe returns
+  // would apply/persist a still-default value for whichever field hadn't
+  // loaded yet, clobbering its real, already-configured value.
+  property bool roundingLoaded: false
+  property bool blurEnabledLoaded: false
+  property bool blurSizeLoaded: false
+  readonly property bool loaded: roundingLoaded && blurEnabledLoaded && blurSizeLoaded
+
   onOpenedChanged: if (opened && !loaded) refresh()
 
   function refresh() {
@@ -76,7 +86,7 @@ Panel {
           var parsed = JSON.parse(text)
           root.rounding = root.clampInt(parsed.int, 0, 20, root.rounding)
         } catch (e) { /* keep previous value */ }
-        root.loaded = true
+        root.roundingLoaded = true
       }
     }
   }
@@ -88,9 +98,12 @@ Panel {
       waitForEnd: true
       onStreamFinished: {
         try {
+          // hyprctl reports this option as a "bool" field, not "int" --
+          // unlike every other decoration:* option this plugin reads.
           var parsed = JSON.parse(text)
-          root.blurEnabled = !!parsed.int
+          root.blurEnabled = parsed.bool !== undefined ? !!parsed.bool : !!parsed.int
         } catch (e) { /* keep previous value */ }
+        root.blurEnabledLoaded = true
       }
     }
   }
@@ -106,6 +119,7 @@ Panel {
           var size = root.clampInt(parsed.int, 1, 20, 8)
           root.blurPercent = root.percentForBlurSize(size)
         } catch (e) { /* keep previous value */ }
+        root.blurSizeLoaded = true
       }
     }
   }
@@ -198,11 +212,45 @@ Panel {
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
 
+  // Custom glyph instead of a font icon: a rounded square with a soft halo
+  // behind it, drawn from plain Rectangles (no shader/blur dependency),
+  // reading as "rounded corners + blur" at a glance.
+  Component {
+    id: omablurGlyph
+    Item {
+      anchors.fill: parent
+      Rectangle {
+        anchors.centerIn: parent
+        width: parent.width * 0.92
+        height: parent.height * 0.92
+        radius: width * 0.4
+        color: button.foreground
+        opacity: 0.10
+      }
+      Rectangle {
+        anchors.centerIn: parent
+        width: parent.width * 0.7
+        height: parent.height * 0.7
+        radius: width * 0.38
+        color: button.foreground
+        opacity: 0.22
+      }
+      Rectangle {
+        anchors.centerIn: parent
+        width: parent.width * 0.48
+        height: parent.height * 0.48
+        radius: width * 0.34
+        color: button.foreground
+      }
+    }
+  }
+
   BarIconButton {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: "◐"
+    iconComponent: omablurGlyph
+    opticalSize: Style.bar.iconCanvas * 1.4
     tooltipText: "Rounding & Blur"
     onPressed: root.toggle()
   }
@@ -229,6 +277,12 @@ Panel {
         anchors.right: parent.right
         anchors.top: parent.top
         spacing: Style.space(18)
+        // Disabled until every probe answers, so a click that lands before a
+        // slower one returns can't apply/persist a still-default value over
+        // an already-configured one (see the `loaded` comment above).
+        enabled: root.loaded
+        opacity: root.loaded ? 1 : 0.45
+        Behavior on opacity { NumberAnimation { duration: 120 } }
 
         // ---------------------------------------------------------- header
         Text {
