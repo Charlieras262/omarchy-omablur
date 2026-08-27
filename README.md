@@ -52,6 +52,18 @@ hl.config({
 Only the lines between those two markers are ever touched — anything else
 you already have in `looknfeel.lua` is left exactly as it was.
 
+### Rounding also applies to the shell itself
+
+Corner rounding isn't only a window thing: Omarchy's own `Style.cornerRadius`
+(used by every popup panel — Display, network, bluetooth, audio, etc.) already
+mirrors `decoration:rounding` live, and
+[omarchy-floating-bar](https://github.com/Charlieras262/omarchy-floating-bar)
+1.4.0+ defaults its own corners to that same value when you haven't set an
+explicit `cornerRadius` in its own config. Dragging Omablur's rounding slider
+calls Omarchy's own `Style.refresh()` after each change, so both follow the
+slider live, with no direct coupling between the three plugins — they all
+just read the one shared value.
+
 ## Remove
 
 ```bash

@@ -156,7 +156,15 @@ Panel {
 
   Process {
     id: applyProc
-    onExited: if (root.applyQueued) root.runApply()
+    onExited: {
+      // Style.cornerRadius already mirrors decoration:rounding for the rest
+      // of the shell (every popup panel, and any bar -- like Floating Bar --
+      // that defaults its own corners to it); Style.refresh() is its own
+      // public re-probe, called only after our keyword call has actually
+      // landed so it can't read the pre-change value.
+      Style.refresh()
+      if (root.applyQueued) root.runApply()
+    }
   }
 
   // ---------------------------------------------------------------- persist
