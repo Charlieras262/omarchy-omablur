@@ -80,23 +80,53 @@ opaque window, bar, menu, or notification shows none of it, no matter how
 strong `decoration:blur` is set.
 
 **The shell itself** — bar, popup panels (Display, network, bluetooth,
-audio, etc.), notifications, and the menu — is handled automatically, but
-needs a one-time opt-in system patch first, since it means touching
-Omarchy's own files (`sudo`, run once):
+audio, etc.), notifications, and the menu — can dim in sync with blur too,
+but only after a one-time, *manual* edit to four of Omarchy's own files
+(this plugin deliberately does not ship a script that runs as root against
+its own git-managed checkout — that checkout can change on every `omarchy
+plugin update`, which would make an auto-run `sudo` script a code-execution
+path into a user-writable directory). Open each file as root (e.g.
+`sudoedit /usr/share/omarchy/shell/Commons/Style.qml`) and add the marked
+line yourself:
 
-```bash
-sudo python3 ~/.config/omarchy/plugins/charlieras262.omablur/patches/apply.py
-omarchy restart shell
+`shell/Commons/Style.qml`, right after `property int gapsOut: 5`:
+
+```qml
+property real shellOpacity: 1
 ```
 
-This adds a shared `Style.shellOpacity` token (default `1`, fully opaque)
-that those surfaces' own background already reads. Turning Omablur's blur
-on sets it to `0.62`; turning it off sets it back to `1`. Each surface's
-color is forced to alpha 1 before that's applied, so `1` always means
-truly, fully opaque even if your theme's own `shell.toml` bakes in some
-`background-alpha` of its own — this plugin's `0` and `1` states are
-absolute, not stacked on top of that. See `patches/apply.py`'s own comments
-for exactly what it changes, and `patches/unapply.py` to revert it.
+`shell/Ui/KeyboardPanel.qml`, change the card's `color:` and `opacity:`
+lines (look for `color: Color.popups.background` and
+`opacity: root.open || root.popoutSwitching ? 1.0 : 0`) to:
+
+```qml
+color: Qt.rgba(Color.popups.background.r, Color.popups.background.g, Color.popups.background.b, 1)
+opacity: (root.open || root.popoutSwitching ? 1.0 : 0) * Style.shellOpacity
+```
+
+`shell/plugins/notifications/components/NotificationCard.qml`, change
+`color: Color.notifications.background` to:
+
+```qml
+color: Qt.rgba(Color.notifications.background.r, Color.notifications.background.g, Color.notifications.background.b, 1)
+opacity: Style.shellOpacity
+```
+
+`shell/plugins/menu/Menu.qml`, change the card's `color: root.background`
+to:
+
+```qml
+color: Qt.rgba(root.background.r, root.background.g, root.background.b, 1)
+opacity: Style.shellOpacity
+```
+
+Then `omarchy restart shell`. `shellOpacity` defaults to `1` (fully
+opaque); Omablur sets it to `0.62` while its own blur is on and back to `1`
+when it's off. Forcing each color's own alpha to `1` first makes those two
+states absolute, not stacked on top of whatever `background-alpha` your
+theme's own `shell.toml` already bakes into that color. An Omarchy update
+to any of these four files will silently drop the edit — just reapply the
+relevant line above if the shell stops dimming with blur again.
 
 **Regular app windows** are a separate story — Hyprland has no idea which
 of your windows you want see-through, so that's a per-app choice you make
