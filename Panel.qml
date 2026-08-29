@@ -151,12 +151,33 @@ Panel {
   property bool blurEnabledLoaded: false
   property bool blurSizeLoaded: false
   readonly property bool loaded: roundingLoaded && blurEnabledLoaded && blurSizeLoaded
+  // Guards the startup re-assert below to once per shell session -- loaded
+  // only ever flips false -> true once (the three *Loaded flags are never
+  // reset), so this is mostly belt-and-suspenders.
+  property bool startupReasserted: false
   onLoadedChanged: if (loaded) {
     root.activePreset = root.detectPreset()
     root.setShellOpacity(root.blurEnabled)
+    // Hyprland loads ~/.config/hypr/looknfeel.lua's own hl.config() calls
+    // at its own startup, before this shell (or its IPC socket) is
+    // necessarily ready -- in practice that leaves blur/rounding not
+    // actually live until something pushes the same config again through
+    // a live `hyprctl eval`, same as toggling the switch off/on already
+    // did manually. Do that once automatically here so a fresh login
+    // doesn't require opening this panel and touching a control just to
+    // make Hyprland's own persisted setting actually take effect.
+    if (!root.startupReasserted) {
+      root.startupReasserted = true
+      root.applyLive(root.rounding, root.blurEnabled, root.blurPercent)
+    }
   }
 
   onOpenedChanged: if (opened && !loaded) refresh()
+
+  // Probed once, immediately, on shell startup -- not gated behind opening
+  // the panel -- so the sync/re-assert above happens on login without
+  // requiring any user interaction.
+  Component.onCompleted: root.refresh()
 
   function refresh() {
     roundingProbe.running = true
