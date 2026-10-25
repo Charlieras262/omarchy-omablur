@@ -113,6 +113,12 @@ color: Qt.rgba(Commons.Color.popups.background.r, Commons.Color.popups.backgroun
 opacity: (root.open ? 1.0 : 0) * Style.shellOpacity
 ```
 
+Optional: to make popups less see-through than the rest of the shell (bar,
+notifications, menu), use `Math.min(1, Style.shellOpacity + 0.2)` instead of
+`Style.shellOpacity` in this file and in `KeyboardPanel.qml` above. That
+gives popups 0.82 instead of 0.62; raise the `0.2` for more opacity, lower
+it for less.
+
 `shell/plugins/notifications/components/NotificationCard.qml`, change
 `color: Commons.Color.notifications.background` (older releases:
 `Color.notifications.background`) to:
