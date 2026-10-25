@@ -81,7 +81,7 @@ strong `decoration:blur` is set.
 
 **The shell itself** — bar, popup panels (Display, network, bluetooth,
 audio, etc.), notifications, and the menu — can dim in sync with blur too,
-but only after a one-time, *manual* edit to four of Omarchy's own files
+but only after a one-time, *manual* edit to five of Omarchy's own files
 (this plugin deliberately does not ship a script that runs as root against
 its own git-managed checkout — that checkout can change on every `omarchy
 plugin update`, which would make an auto-run `sudo` script a code-execution
@@ -104,11 +104,21 @@ color: Qt.rgba(Color.popups.background.r, Color.popups.background.g, Color.popup
 opacity: (root.open || root.popoutSwitching ? 1.0 : 0) * Style.shellOpacity
 ```
 
-`shell/plugins/notifications/components/NotificationCard.qml`, change
-`color: Color.notifications.background` to:
+`shell/Ui/PopupCard.qml` (the bar popups: network, audio, bluetooth, etc.
+on Omarchy 4.0.6+), change the card's `color: Commons.Color.popups.background`
+and `opacity: root.open ? 1.0 : 0` to:
 
 ```qml
-color: Qt.rgba(Color.notifications.background.r, Color.notifications.background.g, Color.notifications.background.b, 1)
+color: Qt.rgba(Commons.Color.popups.background.r, Commons.Color.popups.background.g, Commons.Color.popups.background.b, 1)
+opacity: (root.open ? 1.0 : 0) * Style.shellOpacity
+```
+
+`shell/plugins/notifications/components/NotificationCard.qml`, change
+`color: Commons.Color.notifications.background` (older releases:
+`Color.notifications.background`) to:
+
+```qml
+color: Qt.rgba(Commons.Color.notifications.background.r, Commons.Color.notifications.background.g, Commons.Color.notifications.background.b, 1)
 opacity: Style.shellOpacity
 ```
 
@@ -125,8 +135,16 @@ opaque); Omablur sets it to `0.62` while its own blur is on and back to `1`
 when it's off. Forcing each color's own alpha to `1` first makes those two
 states absolute, not stacked on top of whatever `background-alpha` your
 theme's own `shell.toml` already bakes into that color. An Omarchy update
-to any of these four files will silently drop the edit — just reapply the
+to any of these five files will silently drop the edit — just reapply the
 relevant line above if the shell stops dimming with blur again.
+
+If popups are translucent but still not blurred, check your layer rule's
+`ignore_alpha`: Hyprland only blurs pixels more opaque than that value, so
+`ignore_alpha = 0.5` can skip a 0.62-alpha card. Use `0.2`:
+
+```lua
+hl.layer_rule({ match = { namespace = "^omarchy-.*$" }, blur = true, blur_popups = true, ignore_alpha = 0.2 })
+```
 
 **Regular app windows** are a separate story — Hyprland has no idea which
 of your windows you want see-through, so that's a per-app choice you make
