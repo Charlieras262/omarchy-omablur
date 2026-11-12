@@ -337,7 +337,8 @@ Panel {
   Component {
     id: omablurGlyph
     Item {
-      anchors.fill: parent
+      // No anchors: Omarchy 4.5 loads bar icons in an unsized Loader and gives
+      // an unsized item a canvas of its own, so filling the parent drew at 0x0.
 
       // Squircle outline housing a soft blob glowing off-center, faked with
       // stacked semi-transparent circles (no blur/effects module dependency)
